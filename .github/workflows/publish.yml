@@ -1,0 +1,26 @@
+name: Publish
+
+on:
+  push:
+      tags:
+        - v*
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+
+    steps:
+      
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Compile
+        run: chmod +x build.sh && ./build.sh
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            get-aws-env-alpine
+            get-aws-env-amd64

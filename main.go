@@ -15,9 +15,11 @@ import (
 var env string
 var diff bool
 var prefix string
+var path string
 
 func init() {
-	flag.StringVar(&env, "e", "", "The environment name to pull the variables")
+	flag.StringVar(&env, "e", "", "The environment namespace to pull the variables from")
+	flag.StringVar(&path, "t", "/env", "Path to pull variables from. Defaults to /env")
 	flag.BoolVar(&diff, "d", false, "True to only pull environment variables not present")
 	flag.StringVar(&prefix, "p", "", "Prefix each line of the output")
 	flag.Parse()
@@ -32,7 +34,7 @@ func main() {
 		log.Fatalf("configuration error: %s", err.Error())
 	}
 	client := ssm.NewFromConfig(cfg)
-	parameters, err := GetParametersByPath(fmt.Sprintf("/env/%s", env), client)
+	parameters, err := GetParametersByPath(fmt.Sprintf("%s/%s", path, env), client)
 	if err != nil {
 		log.Fatalf("error requesting parameters: %s", err.Error())
 	}
