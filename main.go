@@ -12,19 +12,30 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 )
 
-var env string
+type envFlags []string
+
+func (env *envFlags) String() string {
+	return strings.Join(*env, "; ")
+}
+
+func (env *envFlags) Set(value string) error {
+	*env = append(*env, value)
+	return nil
+}
+
+var env envFlags
 var diff bool
 var prefix string
 var path string
 
 func init() {
-	flag.StringVar(&env, "e", "", "The environment namespace to pull the variables from")
+	flag.Var(&env, "e", "The environment namespace(s) to pull the variables from")
 	flag.StringVar(&path, "t", "/env", "Path to pull variables from. Defaults to /env")
 	flag.BoolVar(&diff, "d", false, "True to only pull environment variables not present")
 	flag.StringVar(&prefix, "p", "", "Prefix each line of the output")
 	flag.Parse()
-	if env == "" {
-		log.Fatal("You must supply the environment name")
+	if len(env) == 0 {
+		log.Fatal("You must supply at least one environment name")
 	}
 }
 
@@ -34,9 +45,17 @@ func main() {
 		log.Fatalf("configuration error: %s", err.Error())
 	}
 	client := ssm.NewFromConfig(cfg)
-	parameters, err := GetParametersByPath(fmt.Sprintf("%s/%s", path, env), client)
+	for _, envKey := range env {
+		if err := ProcessEnvKey(envKey, client); err != nil {
+			log.Fatalf("error requesting parameters: %s", err.Error())
+		}
+	}
+}
+
+func ProcessEnvKey(envKey string, client ssm.GetParametersByPathAPIClient) error {
+	parameters, err := GetParametersByPath(fmt.Sprintf("%s/%s", path, envKey), client)
 	if err != nil {
-		log.Fatalf("error requesting parameters: %s", err.Error())
+		return err
 	}
 	if diff {
 		for _, key := range GetEnvironmentKeys() {
@@ -46,6 +65,7 @@ func main() {
 	for key, value := range parameters {
 		fmt.Printf("%s%s='%s'\n", prefix, key, value)
 	}
+	return nil
 }
 
 func GetParametersByPath(path string, client ssm.GetParametersByPathAPIClient) (map[string]string, error) {
