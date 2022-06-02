@@ -19,7 +19,10 @@ func (env *envFlags) String() string {
 }
 
 func (env *envFlags) Set(value string) error {
-	*env = append(*env, value)
+	envKeys := strings.Split(value, ",")
+	for _, envKey := range envKeys {
+		*env = append(*env, envKey)
+	}
 	return nil
 }
 
